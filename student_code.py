@@ -182,11 +182,11 @@ class InferenceEngine(object):
 
         binding = match(rule.lhs[0], fact.statement)
 
-        if binding:
+        if binding:  
             rhs = instantiate(rule.rhs, binding)
             lhs = []
             for i in rule.lhs[1:]:
-                    lhs.append(instantiate(i, binding))
+                lhs.append(instantiate(i, binding))
             if len(rule.lhs) == 1:
                 inf_fact = Fact(rhs, [[fact, rule]])
                 inf_fact.asserted = False
