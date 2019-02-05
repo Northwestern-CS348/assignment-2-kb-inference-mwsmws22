@@ -116,7 +116,7 @@ class KnowledgeBase(object):
             print("Invalid ask:", fact.statement)
             return []
 
-    def kb_retract(self, fact):
+    def kb_retract(self, given):
         """Retract a fact from the KB
 
         Args:
@@ -125,10 +125,43 @@ class KnowledgeBase(object):
         Returns:
             None
         """
-        printv("Retracting {!r}", 0, verbose, [fact])
+        printv("Retracting {!r}", 0, verbose, [given])
         ####################################################
         # Student code goes here
-        
+
+        if isinstance(given, Fact):
+            if given in self.facts:
+                fact = self._get_fact(given)
+                fact.asserted = False;
+                if fact.supported_by == []: 
+                    self.facts.remove(fact)
+                    for child in fact.supports_facts:
+                        for pair in child.supported_by:
+                            if fact in pair:
+                                child.supported_by.remove(pair)
+                                self.kb_retract(child) 
+                    for child in fact.supports_rules:
+                        for pair in child.supported_by:
+                            if fact in pair:
+                                child.supported_by.remove(pair)
+                                self.kb_retract(child) 
+
+        if isinstance(given, Rule):
+            if given in self.rules:
+                rule = self._get_rule(given)
+                if rule.asserted == False:
+                    if rule.supported_by == []: 
+                        self.rules.remove(rule)
+                        for child in rule.supports_facts:
+                            for pair in child.supported_by:
+                                if rule in pair:
+                                    child.supported_by.remove(pair)
+                                    self.kb_retract(child) 
+                        for child in rule.supports_rules:
+                            for pair in child.supported_by:
+                                if rule in pair:
+                                    child.supported_by.remove(pair)
+                                    self.kb_retract(child)  
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
@@ -146,3 +179,23 @@ class InferenceEngine(object):
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+
+        binding = match(rule.lhs[0], fact.statement)
+
+        if binding:
+            rhs = instantiate(rule.rhs, binding)
+            lhs = []
+            for i in rule.lhs[1:]:
+                    lhs.append(instantiate(i, binding))
+            if len(rule.lhs) == 1:
+                inf_fact = Fact(rhs, [[fact, rule]])
+                inf_fact.asserted = False
+                fact.supports_facts.append(inf_fact)
+                rule.supports_facts.append(inf_fact)
+                kb.kb_add(inf_fact)
+            else:
+                inf_rule = Rule([lhs, rhs], [[fact, rule]])
+                inf_rule.asserted = False;   
+                fact.supports_rules.append(inf_rule)
+                rule.supports_rules.append(inf_rule)
+                kb.kb_add(inf_rule)
